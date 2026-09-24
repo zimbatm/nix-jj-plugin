@@ -62,8 +62,12 @@ $ NIX=/path/to/nix PLUGIN=$PWD/jj-plugin.so tests/run.sh
 - **A plugin has no stable ABI.** It links against Nix's C++ internals, so it
   must be built against the exact Nix that loads it. This is a place to try
   the design, not to depend on.
-- **Local workspaces only.** There is no `jj+ssh:`; a jj repository is served
-  over its Git backend, so fetch it as `git+ssh:`.
+- **Local workspaces only, and that is not a gap.** jj has no protocol of
+  its own: every remote command is `jj git …`, so a remote jj repository is
+  a Git repository. Change IDs ride along in a `change-id` commit header, so
+  `git+ssh:` already fetches them. A `jj+ssh:` would move the same bytes
+  through more code. What only jj knows is local: the change in progress in
+  `@`, which files it tracks, and workspaces with no `.git` at all.
 - **Reading snapshots.** Any jj command records the working copy first, so
   evaluating a flake creates a working-copy commit. That is how jj sees your
   edits at all, but it does mean a read changes the repository.
