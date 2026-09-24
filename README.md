@@ -1,5 +1,12 @@
 # nix-jj-plugin
 
+**An experiment. Do not depend on it.** It exists to find out what a
+non-Git fetcher needs from Nix, and it is published so that others can
+argue with the design. It is not a product, it has no releases, no
+stability promise and no support. It builds against one unmerged Nix
+branch and will break when that branch moves. If the idea holds up, the
+right home for it is Nix itself, not this repository.
+
 A Nix fetcher for [Jujutsu](https://jj-vcs.dev) workspaces, as a plugin.
 
 Without it, `nix build .` in a jj workspace that has no `.git` copies the
@@ -11,7 +18,7 @@ workspace is locked to a revision.
 $ nix --plugin-files ./jj-plugin.so build .
 ```
 
-It needs [NixOS/nix#16507](https://github.com/NixOS/nix/pull/16507), which
+It needs the unmerged [NixOS/nix#16507](https://github.com/NixOS/nix/pull/16507), which
 lets a fetcher claim a local directory. Nix releases do not carry that yet.
 
 ## What it does
