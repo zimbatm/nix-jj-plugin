@@ -23,7 +23,16 @@
           nixPkgs = nix.packages.${system};
         in
         {
-          default = self.packages.${system}.nix-jj-plugin;
+          default = self.packages.${system}.nix;
+
+          # A plugin and the Nix that loads it have to be the same build, or
+          # dlopen fails on an undefined symbol. Handing out one command that
+          # already points at both is the only way to make that unmissable.
+          nix = pkgs.writeShellScriptBin "nix" ''
+            exec ${nixPkgs.nix}/bin/nix \
+              --plugin-files ${self.packages.${system}.nix-jj-plugin}/lib/jj-plugin.so \
+              "$@"
+          '';
 
           nix-jj-plugin = pkgs.stdenv.mkDerivation {
             pname = "nix-jj-plugin";
