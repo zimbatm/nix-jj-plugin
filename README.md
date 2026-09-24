@@ -1,0 +1,64 @@
+# nix-jj-plugin
+
+A Nix fetcher for [Jujutsu](https://jj-vcs.dev) workspaces, as a plugin.
+
+Without it, `nix build .` in a jj workspace that has no `.git` copies the
+whole directory into the store — `.jj/`, build output, everything — and the
+flake gets no `rev`. With it, the store holds what jj tracks, and a clean
+workspace is locked to a revision.
+
+```console
+$ nix --plugin-files ./jj-plugin.so build .
+```
+
+It needs [NixOS/nix#16507](https://github.com/NixOS/nix/pull/16507), which
+lets a fetcher claim a local directory. Nix releases do not carry that yet.
+
+## What it does
+
+| Workspace | Result |
+| --- | --- |
+| `@` is empty (nothing in progress) | Files of `@`, `rev` is the commit ID of `@-`, input is locked |
+| `@` has a change in progress | Files of `@`, no `rev`, warns like a dirty Git tree |
+| Second workspace (`jj workspace add`) | Same as above; this is the case that has no `.git` at all |
+| Colocated (`.jj` and `.git`) | Git handles it, unchanged — schemes are asked in name order |
+
+Files come from `jj file list`, so jj's own ignore rules decide what reaches
+the store.
+
+Explicit URLs work too: `jj+file:///path/to/workspace`.
+
+## Build
+
+```console
+$ nix build
+$ nix --plugin-files ./result/lib/jj-plugin.so flake metadata /path/to/workspace
+```
+
+To build against a Nix worktree instead of the pinned one:
+
+```console
+$ nix develop /path/to/nix -c bash -c '
+    export PKG_CONFIG_PATH=/path/to/nix/build/meson-uninstalled:$PKG_CONFIG_PATH
+    g++ -shared -fPIC -std=c++23 $(pkg-config --cflags nix-fetchers nix-store nix-util) \
+      -o jj-plugin.so src/jj.cc'
+```
+
+## Test
+
+```console
+$ NIX=/path/to/nix PLUGIN=$PWD/jj-plugin.so tests/run.sh
+```
+
+## Known limits
+
+- **A plugin has no stable ABI.** It links against Nix's C++ internals, so it
+  must be built against the exact Nix that loads it. This is a place to try
+  the design, not to depend on.
+- **Local workspaces only.** There is no `jj+ssh:`; a jj repository is served
+  over its Git backend, so fetch it as `git+ssh:`.
+- **Reading snapshots.** Any jj command records the working copy first, so
+  evaluating a flake creates a working-copy commit. That is how jj sees your
+  edits at all, but it does mean a read changes the repository.
+- **No `change_id`.** jj's stable change ID is what makes it jj, and a Nix
+  `rev` must parse as a hash, so only the commit ID is exposed today.
